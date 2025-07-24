@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">JARVIS</string>
+    <string name="tts_ready">Text-to-Speech is ready</string>
+    <string name="tts_failed">Text-to-Speech initialization failed</string>
+    <string name="test_voice">Test JARVIS Voice</string>
+    <string name="set_volume">Set Volume to 60%</string>
+    <string name="volume_set">Volume set to 60%</string>
+</resources>
