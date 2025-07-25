@@ -1,7 +1,9 @@
 // MainActivity.kt
 package com.example.jarvis
 
+import android.content.Intent
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
@@ -9,6 +11,7 @@ import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import java.util.*
+import androidx.core.net.toUri
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var tts: TextToSpeech
@@ -32,7 +35,26 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             setMediaVolume(0.6f)
             statusText.text = getString(R.string.volume_set)
         }
+
+        findViewById<Button>(R.id.playSpotifyButton).setOnClickListener {
+            playSpotifyTrack("spotify:track:42T2QQv3xgBlpQxaSP7lnK?si=afe826cb8a7b4ec9") // one last breath - creed
+        }
+
     }
+
+    private fun playSpotifyTrack(uri: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.data = uri.toUri()
+            intent.putExtra(Intent.EXTRA_REFERRER, ("android-app://" + this.packageName).toUri())
+            intent.setPackage("com.spotify.music")
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Spotify not installed or failed to open.", Toast.LENGTH_SHORT).show()
+            Log.e("SpotifyLaunch", "Error launching Spotify", e)
+        }
+    }
+
 
     private fun speak(text: String) {
         tts.voice = Voice("en-gb-x-rjs-local", Locale.UK, 1, 1, false, emptySet())
