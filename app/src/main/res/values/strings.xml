@@ -6,4 +6,7 @@
     <string name="set_volume">Set Volume to 60%</string>
     <string name="volume_set">Volume set to 60%</string>
     <string name="play_song">Play Song</string>">
+    <string name="listening_for_wake_word">Listening for wake word…</string>
+    <string name="wake_word_detected">Wake word detected. Listening…</string>
+    <string name="command_heard">Heard: %1$s</string>
 </resources>

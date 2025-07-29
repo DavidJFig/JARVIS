@@ -2,9 +2,13 @@
 package com.example.jarvis
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioManager
-import android.net.Uri
+import android.media.MediaPlayer
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.MediaStore.Audio.Media
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
 import android.util.Log
@@ -12,15 +16,88 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import java.util.*
 import androidx.core.net.toUri
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var tts: TextToSpeech
     private lateinit var statusText: TextView
-    private var availableVoices: List<Voice> = emptyList()
+    private lateinit var speechRecognizer: SpeechRecognizer
+    private lateinit var lastHeardText: TextView
+    private var wakeWordHeard = false
+    private lateinit var wakeSound: MediaPlayer
+    private var commandReceived = false
+    private val handler = Handler(Looper.getMainLooper())
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1)
+        }
+
+
+        lastHeardText = findViewById(R.id.lastHeardText)
+
+        if (SpeechRecognizer.isRecognitionAvailable(this)) {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            }
+
+            speechRecognizer.setRecognitionListener(object : RecognitionListener {
+                override fun onResults(results: Bundle) {
+                    val spokenText = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.get(0)?.lowercase(Locale.ROOT)
+                    if (spokenText != null) {
+                        if (wakeWordHeard) {
+                            lastHeardText.text = getString(R.string.command_heard, spokenText)
+                            wakeWordHeard = false
+                            commandReceived = true
+                        } else if (spokenText.contains("jarvis")) {
+                            lastHeardText.text = getString(R.string.wake_word_detected)
+                            wakeWordHeard = true
+                            commandReceived = false
+
+                            wakeSound = MediaPlayer.create(this@MainActivity, R.raw.jarvis_wake)
+                            wakeSound.setOnCompletionListener {
+                                if (!commandReceived) {
+                                    wakeWordHeard = false
+                                    lastHeardText.text = getString(R.string.listening_for_wake_word)
+                                }
+                                wakeSound.release()
+                            }
+                            wakeSound.start()
+                        } else {
+                            lastHeardText.text = getString(R.string.listening_for_wake_word)
+                        }
+                    }
+                    speechRecognizer.startListening(intent) // restart listening
+                }
+
+                override fun onReadyForSpeech(params: Bundle?) {}
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() {}
+                override fun onError(error: Int) {
+                    speechRecognizer.startListening(intent) // restart even on error
+                }
+                override fun onPartialResults(partialResults: Bundle?) {}
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+            })
+
+            speechRecognizer.startListening(intent)
+        } else {
+            Toast.makeText(this, "Speech recognition not available", Toast.LENGTH_SHORT).show()
+        }
+
 
         tts = TextToSpeech(this, this)
         statusText = findViewById(R.id.statusText)
@@ -34,10 +111,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         findViewById<Button>(R.id.testVolumeButton).setOnClickListener {
             setMediaVolume(0.6f)
             statusText.text = getString(R.string.volume_set)
-        }
-
-        findViewById<Button>(R.id.playSpotifyButton).setOnClickListener {
-            playSpotifyTrack("spotify:track:42T2QQv3xgBlpQxaSP7lnK?si=afe826cb8a7b4ec9") // one last breath - creed
         }
 
     }
@@ -87,6 +160,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onDestroy() {
         tts.stop()
         tts.shutdown()
+        speechRecognizer.destroy()
+        if (::wakeSound.isInitialized) wakeSound.release()
         super.onDestroy()
     }
 }

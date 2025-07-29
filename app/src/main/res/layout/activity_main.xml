@@ -28,11 +28,12 @@
         android:layout_height="wrap_content"
         android:text="@string/set_volume" />
 
-    <Button
-        android:id="@+id/playSpotifyButton"
+    <TextView
+        android:id="@+id/lastHeardText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/play_song"
+        android:text="@string/listening_for_wake_word"
+        android:textSize="18sp"
         android:layout_marginTop="16dp" />
 
 
